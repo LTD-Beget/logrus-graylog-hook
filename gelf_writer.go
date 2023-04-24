@@ -99,7 +99,9 @@ func NewWriter(addr string) (*Writer, error) {
 	if w.conn, err = net.Dial("udp", addr); err != nil {
 		return nil, err
 	}
+
 	if w.hostname, err = os.Hostname(); err != nil {
+		w.conn.Close()
 		return nil, err
 	}
 

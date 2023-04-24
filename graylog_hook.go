@@ -186,7 +186,7 @@ func (hook *GraylogHook) reconnect() {
 
 	g, err := NewWriter(hook.graylogAddr)
 	if err != nil {
-		fmt.Printf("Fail reconnect to Graylog, error: '%s'\n", err.Error())
+		logrus.WithError(err).Error("Fail reconnect to Graylog")
 		return
 	}
 
