@@ -78,11 +78,12 @@ func NewAsyncGraylogHook(addr string, extra map[string]interface{}) *GraylogHook
 	}
 
 	hook := &GraylogHook{
-		Host:       host,
-		Extra:      extra,
-		Level:      logrus.DebugLevel,
-		gelfLogger: g,
-		buf:        make(chan graylogEntry, BufSize),
+		Host:        host,
+		Extra:       extra,
+		Level:       logrus.DebugLevel,
+		gelfLogger:  g,
+		graylogAddr: addr,
+		buf:         make(chan graylogEntry, BufSize),
 	}
 	go hook.fire() // Log in background
 	return hook
