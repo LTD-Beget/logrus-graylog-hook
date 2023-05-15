@@ -24,6 +24,7 @@ type GraylogHook struct {
 	Extra       map[string]interface{}
 	Host        string
 	Level       logrus.Level
+	graylogAddr string
 	gelfLogger  *Writer
 	buf         chan graylogEntry
 	wg          sync.WaitGroup
@@ -56,6 +57,7 @@ func NewGraylogHook(addr string, extra map[string]interface{}) *GraylogHook {
 		Extra:       extra,
 		Level:       logrus.DebugLevel,
 		gelfLogger:  g,
+		graylogAddr: addr,
 		synchronous: true,
 	}
 	return hook
@@ -76,11 +78,12 @@ func NewAsyncGraylogHook(addr string, extra map[string]interface{}) *GraylogHook
 	}
 
 	hook := &GraylogHook{
-		Host:       host,
-		Extra:      extra,
-		Level:      logrus.DebugLevel,
-		gelfLogger: g,
-		buf:        make(chan graylogEntry, BufSize),
+		Host:        host,
+		Extra:       extra,
+		Level:       logrus.DebugLevel,
+		gelfLogger:  g,
+		graylogAddr: addr,
+		buf:         make(chan graylogEntry, BufSize),
 	}
 	go hook.fire() // Log in background
 	return hook
@@ -174,10 +177,28 @@ func logrusLevelToSylog(level logrus.Level) int32 {
 	}
 }
 
+func (hook *GraylogHook) reconnect() {
+	hook.mu.Lock()
+	defer hook.mu.Unlock()
+
+	if hook.gelfLogger != nil {
+		return
+	}
+
+	g, err := NewWriter(hook.graylogAddr)
+	if err != nil {
+		logrus.WithError(err).Error("Fail reconnect to Graylog")
+		return
+	}
+
+	hook.gelfLogger = g
+}
+
 // sendEntry sends an entry to graylog synchronously
 func (hook *GraylogHook) sendEntry(entry graylogEntry) {
 	if hook.gelfLogger == nil {
-		fmt.Println("Can't connect to Graylog")
+		fmt.Println("Can't connect to Graylog, reconnecting...")
+		go hook.reconnect()
 		return
 	}
 	w := hook.gelfLogger
